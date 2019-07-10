@@ -38,19 +38,17 @@ namespace route_task {
 	};
 
 	struct Distance {
-		Distance(unsigned int v, Direction d, Line l):_val(v), _dir(d), _line(l) {};
 		int _val;
 		Direction _dir;
 		Line _line;
+		Distance(const unsigned int& v, const Direction& d, const Line& l):_val(v), _dir(d), _line(l) {};
 	};
 
 	struct Station {
 
-		Station(const string& name) {
-			const_cast<string&>(_name) = name;
-		}
+		Station(const string& name) { const_cast<string&>(_name) = name; }
 
-		void addBranch(unsigned int branch_id, unsigned int distance, Direction dir, Line l) { 
+		void addBranch(const unsigned int& branch_id, const unsigned int& distance, const Direction& dir, const Line& l) {
 			_branches.insert(pair<unsigned int, Distance>(branch_id, Distance(distance, dir, l)));
 		}
 
@@ -79,7 +77,7 @@ namespace route_task {
 
 	struct Schedule{
 
-		unsigned int timeToWait(Direction dir, Line line, unsigned int arrival_t, unsigned int time_now) {
+		unsigned int timeToWait(const Direction& dir, const Line& line, const unsigned int& arrival_t, const unsigned int& time_now) {
 
 			// time moments of passing towards: n*T + t = time_now + waiting_time
 				// waiting_time = n*T + t - time_now = n*T + t - time_now%T
@@ -100,7 +98,7 @@ namespace route_task {
 			return wait_time;
 		}
 
-		unsigned int trainCycle(Line line) { // sec
+		unsigned int trainCycle(const Line& line) { // sec
 			switch (line) {
 				case Red: return _red_cycle;										// assumed to be difined by user
 				case Blue: return _blue_cycle;
@@ -109,7 +107,7 @@ namespace route_task {
 			}
 		}
 
-		void setTrainCycle(Line line, const unsigned int& val) {
+		void setTrainCycle(const Line& line, const unsigned int& val) {
 			switch (line) {
 				case Red: const_cast<unsigned int&>(_red_cycle) = val;
 				case Blue: const_cast<unsigned int&>(_blue_cycle) = val;
@@ -126,7 +124,9 @@ namespace route_task {
 	public:
 
 		Researcher() { introduction(); }
-		~Researcher() { for (auto s = _stations_pool.begin(); s != _stations_pool.end(); ++s) delete s->second; }
+		~Researcher() { 
+			for (auto s = _stations_pool.begin(); s != _stations_pool.end(); ++s) delete s->second; 
+		}
 
 		void introduction() {
 			cout << "Hello, nice to see you.\n\nWhat time is it? Enter minutes passed since 0:00\n";
@@ -142,6 +142,7 @@ namespace route_task {
 		}
 
 		void initializeStations() {
+			// entered in code now, assumed to be entered by user later
 			unsigned int id = 223;
 			unsigned int t = 0, dist = 500, cycle = 0; // assumed to be entered by user later
 			Line line = Red;
@@ -438,7 +439,7 @@ namespace route_task {
 
 		}
 
-		void prepare() {
+		void clear() {
 			for (auto station = _stations_pool.begin(); station != _stations_pool.end(); ++station) {
 				station->second->clear(); 
 				_departure_point_id = 0;
@@ -448,11 +449,11 @@ namespace route_task {
 
 		void getInitialConditions() {
 
-			prepare();
+			clear();
 
 			cout << "\nPlease enter a code of departure point:\n ";
 			numeric_in(_departure_point_id);
-			if (_stations_pool.find(_departure_point_id) == _stations_pool.end()) {
+			if (_stations_pool.find(_departure_point_id) == _stations_pool.end()) { // entry with that key doesn't exist
 				cout << "\nSorry, it seems points with code you entered don't exist \nPlease try again!";
 				getInitialConditions();
 			}
@@ -482,9 +483,9 @@ namespace route_task {
 
 		void outputRezult() {
 			if		(_stations_pool.empty()) 
-				cout << "\n Sorry, it seems to be no way from your departure point to your destination. Call support department please\n +79179795733\n";
+				cout << "\n It seems to be no way from your departure point to your destination. Call support department please\n +79179795733\n";
 			else	
-				cout << "\n The shortest rout:\n";
+				cout << "\n Optimal path:\n You're here";
 			for(int station_id : _stations_pool[_destination_point_id]->_current_path) {
 				// output names of stations at found rout
 				_stations_pool[station_id]->out();
@@ -492,38 +493,96 @@ namespace route_task {
 			cout <<"\n\n";
 		}
 
-		void search(Line current_line = Undefined, unsigned int current_point_id = 0) { // accept 0 when first call - not the best idea though
-			if (!current_point_id) current_point_id = _departure_point_id;
+		void search(Line current_line = Undefined, unsigned int current_point_id = 0/*uncomment for first method*/ ) {
 
-			Station* cur_point = _stations_pool[current_point_id];
+			// first (whong) method of detouring (end to end all branches)
+				if (!current_point_id) current_point_id = _departure_point_id;
+				Station* cur_point = _stations_pool[current_point_id];
 
-			// we use map for sorting to be automativeand effective
-			map<unsigned int, pair<unsigned int, Line>> stations_to_detour; // detour_order (relate destination), station_id, line
+				// we use map for sorting to be automativeand effective
+				map<unsigned int, pair<unsigned int, Line>> stations_to_detour; // detour_order (relate destination), station_id, line
 
-			for (auto branch = cur_point->_branches.begin(); branch != cur_point->_branches.end(); ++branch) {	
+				for (auto branch = cur_point->_branches.begin(); branch != cur_point->_branches.end(); ++branch) {
 
-				unsigned int distance_assumed = cur_point->_current_distance + branch->second._val; 
-				Line new_line = branch->second._line; //
+					unsigned int distance_assumed = cur_point->_current_distance + branch->second._val;
+					Line new_line = branch->second._line;
+
+					if (new_line != current_line) { // transfer
+						Direction d = branch->second._dir;
+						scheduleInfluence(distance_assumed, cur_point, _time_start, new_line, d);
+					}
+
+					unsigned int id = branch->first, detour_order = distance_assumed;
+					if (findPointDistance(id, distance_assumed, cur_point->_current_path)) {
+						// maintain uniqness of key for staions to overcome
+						if (stations_to_detour.find(detour_order) != stations_to_detour.end()) detour_order++;
+						stations_to_detour.insert(pair<unsigned int, pair<unsigned int, Line>>(detour_order, pair<unsigned int, Line>(id, new_line)));
+					}
+				}
+
+				for (auto branch = stations_to_detour.begin(); branch != stations_to_detour.end(); ++branch) {
+					search(branch->second.second, branch->second.first);
+			}
+			// end first method of detour
+
+
+			// second (right) method of detouring (end to end all branches)
+				// instead of recourive call
+				// cycle initialization
+				// <detour_order (relate destination), <station_id, line>>
+/*				map<unsigned int, pair<unsigned int, Line>> detour_curent_level;
+				detour_curent_level.insert(pair<unsigned int, pair<unsigned int, Line>>(0, pair<unsigned int, Line>(_departure_point_id, Undefined)));
+				map<unsigned int, pair<unsigned int, Line>> detour_next_level;
 				
-				bool is_transfer = (new_line != current_line);
-				if (is_transfer) {
-					Direction d = branch->second._dir;
-					scheduleInfluence(distance_assumed, cur_point, _time_start, new_line, d);
-				}
-				unsigned int id = branch->first, detour_order = distance_assumed;
-				if (findPointDistance(id, distance_assumed, cur_point->_current_path)) {
-					// maintain uniqness of key for staions to overcome
-					if (stations_to_detour.find(detour_order) != stations_to_detour.end()) detour_order++;
-					stations_to_detour.insert( pair<unsigned int, pair<unsigned int, Line>>( detour_order, pair<unsigned int, Line>(id, new_line) ) );
-				}
-			}
+				while (true) {
 
-			for (auto branch = stations_to_detour.begin(); branch != stations_to_detour.end(); ++branch) {
-				search(branch->second.second, branch->second.first);
-			}
+					// action of detouring
+
+					// for each station of current level
+					for (auto cur_node = detour_curent_level.begin(); cur_node != detour_curent_level.end(); cur_node++) {
+						Station* cur_point = _stations_pool[cur_node->first];
+						Line current_line = cur_node->second.second;
+
+						// for each branch going out of it
+						for (auto branch = cur_point->_branches.begin(); branch != cur_point->_branches.end(); ++branch) {
+
+							unsigned int distance_assumed = cur_point->_current_distance + branch->second._val;
+							Line new_line = branch->second._line;
+
+							// if branch is of another line then station itself, consider delay for transfer
+							if (new_line != current_line) { // if transfer
+								Direction d = branch->second._dir;
+								scheduleInfluence(distance_assumed, cur_point, _time_start, new_line, d);
+							}
+
+							// if our branch yiell distance less then it already has, we will accaunt it in next level (next while cycle)
+							unsigned int id = branch->first, detour_order = distance_assumed;
+							if (findPointDistance(id, distance_assumed, cur_point->_current_path)) {
+								// maintain uniqness of key for staions to overcome
+								if (detour_next_level.find(detour_order) != detour_next_level.end()) detour_order++; 
+								detour_next_level.insert(pair<unsigned int, pair<unsigned int, Line>>(detour_order, pair<unsigned int, Line>(id, new_line)));
+							}
+						}
+					}
+
+					// hendle finish of detouring
+					unsigned int min_distance_current = INF;
+					for (auto next_node = detour_curent_level.begin(); next_node != detour_curent_level.end(); next_node++) {
+
+						// find minimal distance of stations we will be considering next level
+						if (_stations_pool[next_node->first]->_current_distance < min_distance_current)
+							min_distance_current = _stations_pool[next_node->first]->_current_distance;
+					}
+
+					if (min_distance_current >= _stations_pool[_destination_point_id]->_current_distance) break;
+
+					// next step detouring
+					detour_curent_level = detour_next_level;
+					detour_next_level.clear();
+				}*/
 		}
 
-		bool findPointDistance(unsigned int station_id, unsigned int distance_assumed, vector<unsigned int> current_path) { // finds general distance from departure point to current point we observe
+		bool findPointDistance(const unsigned int& station_id, const unsigned int& distance_assumed, const vector<unsigned int>& current_path) { // finds general distance from departure point to current point we observe
 
 			if (distance_assumed < _stations_pool[station_id]->_current_distance) { 
 				
@@ -552,7 +611,7 @@ namespace route_task {
 
 	private:
 		map<const unsigned int, Station*> _stations_pool;
-		unsigned int _time_start = 0; // minutes from 0:00
+		unsigned int _time_start = 0; // minutes since 0:00
 		unsigned int _departure_point_id = 0;
 		unsigned int _destination_point_id = 0;
 		Schedule _schedule;
@@ -577,14 +636,3 @@ int main()
 		else  exit(0); // idk what to do with this
 	}
 }
-
-// Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
-// Отладка программы: F5 или меню "Отладка" > "Запустить отладку"
-
-// Советы по началу работы 
-//   1. В окне обозревателя решений можно добавлять файлы и управлять ими.
-//   2. В окне Team Explorer можно подключиться к системе управления версиями.
-//   3. В окне "Выходные данные" можно просматривать выходные данные сборки и другие сообщения.
-//   4. В окне "Список ошибок" можно просматривать ошибки.
-//   5. Последовательно выберите пункты меню "Проект" > "Добавить новый элемент", чтобы создать файлы кода, или "Проект" > "Добавить существующий элемент", чтобы добавить в проект существующие файлы кода.
-//   6. Чтобы снова открыть этот проект позже, выберите пункты меню "Файл" > "Открыть" > "Проект" и выберите SLN-файл.
