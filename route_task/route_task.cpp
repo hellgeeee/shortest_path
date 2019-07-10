@@ -81,19 +81,30 @@ namespace route_task {
 
 	struct Schedule
 	{
-		static unsigned int trainCycle(Line line) { // sec
+
+		unsigned int timeToWait(Direction dir, Line line, unsigned int arrival_t, unsigned int time_now) {
+			if (dir == Towards) return (time_now + 			arrival_t				) % trainCycle(line);
+			else				return (time_now + (trainCycle(line) - arrival_t)	) % trainCycle(line);
+		}
+
+		unsigned int trainCycle(Line line) { // sec
 			switch (line) {
-			case Red: return 40000;										// assumed to be difined by user
-			case Blue: return 160000;
-			case Green: return 40000;
+			case Red: return _red_cycle;										// assumed to be difined by user
+			case Blue: return _blue_cycle;
+			case Green: return _green_cycle;
 			default: return 100000;
 			}
 		}
 
-		static unsigned int timeToWait(Direction dir, Line line, unsigned int arrival_t, unsigned int time_now) {
-			if (dir == Towards) return (time_now + 			arrival_t				) % trainCycle(line);
-			else				return (time_now + (trainCycle(line) - arrival_t)	) % trainCycle(line);
+		void setTrainCycle(Line line, const unsigned int& val) {
+			if (line == Red) const_cast<unsigned int&>(_red_cycle) = val;
+			else if (line == Blue) const_cast<unsigned int&>(_blue_cycle) = val;
+			else if (line == Green) const_cast<unsigned int&>(_green_cycle) = val;
 		}
+
+		const unsigned int _red_cycle = 40000;
+		unsigned const int _blue_cycle = 40000;
+		unsigned const int _green_cycle = 40000;
 	};
 
 	class Researcher {
@@ -104,7 +115,7 @@ namespace route_task {
 
 		void introduction() {
 			cout << "Hello, nice to see you.\n\nWhat time is it? Enter minutes passed since 0:00\n";
-			numeric_in(_time_now);
+			numeric_in(_time_start);
 
 			initializeStations();
 
@@ -117,11 +128,12 @@ namespace route_task {
 
 		void initializeStations() {
 			unsigned int id = 223;
-			unsigned int t = 0, dist = 500; // assumed to be entered by user later
+			unsigned int t = 0, dist = 500, cycle = 0; // assumed to be entered by user later
 			Line line = Red;
 			_stations_pool.insert(pair<int, Station*>(id, new Station("Kamennaja Horka")));
 			_stations_pool[id]->addBranch(222, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -129,6 +141,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(223, dist, Towards, line);
 			_stations_pool[id]->addBranch(221, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 			
 			id--;
 			t += dist;
@@ -136,6 +149,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(222, dist, Towards, line);
 			_stations_pool[id]->addBranch(220, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -143,6 +157,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(221, dist, Towards, line);
 			_stations_pool[id]->addBranch(219, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -150,6 +165,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(220, dist, Towards, line);
 			_stations_pool[id]->addBranch(218, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -159,6 +175,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(315, dist, Backwards, Green);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(Green, dist*7));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -166,6 +183,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(218, dist, Towards, line);
 			_stations_pool[id]->addBranch(216, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -176,6 +194,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(117, dist, Towards, Blue);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(Blue, dist*8));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -183,6 +202,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(216, dist, Towards, line);
 			_stations_pool[id]->addBranch(214, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -190,6 +210,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(215, dist, Towards, line);
 			_stations_pool[id]->addBranch(213, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -197,6 +218,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(214, dist, Towards, line);
 			_stations_pool[id]->addBranch(212, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -204,6 +226,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(213, dist, Towards, line);
 			_stations_pool[id]->addBranch(211, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
@@ -211,12 +234,16 @@ namespace route_task {
 			_stations_pool[id]->addBranch(212, dist, Towards, line);
 			_stations_pool[id]->addBranch(210, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id--;
 			t += dist;
 			_stations_pool.insert(pair<int, Station*>(id, new Station("Mahiliouskaja")));
 			_stations_pool[id]->addBranch(211, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
+
+			_schedule.setTrainCycle(Red, cycle); cycle = 0;
 
 			id = 109;
 			t = 0;
@@ -224,6 +251,7 @@ namespace route_task {
 			_stations_pool.insert(pair<int, Station*>(id, new Station("Scomyslica")));
 			_stations_pool[id]->addBranch(110, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -231,6 +259,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(109, dist, Backwards, line);
 			_stations_pool[id]->addBranch(111, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -238,6 +267,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(110, dist, Backwards, line);
 			_stations_pool[id]->addBranch(112, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -245,6 +275,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(111, dist, Backwards, line);
 			_stations_pool[id]->addBranch(113, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -252,6 +283,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(112, dist, Backwards, line);
 			_stations_pool[id]->addBranch(114, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -259,6 +291,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(113, dist, Backwards, line);
 			_stations_pool[id]->addBranch(115, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -269,13 +302,16 @@ namespace route_task {
 			_stations_pool[id]->addBranch(315, dist, Towards, Green);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(Green, dist * 7));
+			cycle += dist;
 
 			id +=2;
+			t += dist; 
 			t += dist;
 			_stations_pool.insert(pair<int, Station*>(id, new Station("Plosca Pioramohi")));
 			_stations_pool[id]->addBranch(216, dist, Backwards, Red);
 			_stations_pool[id]->addBranch(118, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -283,6 +319,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(117, dist, Backwards, line);
 			_stations_pool[id]->addBranch(119, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -290,6 +327,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(118, dist, Backwards, line);
 			_stations_pool[id]->addBranch(120, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -297,6 +335,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(119, dist, Backwards, line);
 			_stations_pool[id]->addBranch(121, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -304,6 +343,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(120, dist, Backwards, line);
 			_stations_pool[id]->addBranch(122, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -311,6 +351,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(121, dist, Backwards, line);
 			_stations_pool[id]->addBranch(123, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -318,12 +359,17 @@ namespace route_task {
 			_stations_pool[id]->addBranch(122, dist, Backwards, line);
 			_stations_pool[id]->addBranch(124, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
 			_stations_pool.insert(pair<int, Station*>(id, new Station("Urucca")));
 			_stations_pool[id]->addBranch(123, dist, Backwards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
+			cycle += dist;
+
+			_schedule.setTrainCycle(Blue, cycle); cycle = 0;
 
 			id = 310;
 			t = 0;
@@ -331,6 +377,7 @@ namespace route_task {
 			_stations_pool.insert(pair<int, Station*>(id, new Station("Slucki Hascinieca")));
 			_stations_pool[id]->addBranch(311, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -338,6 +385,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(310, dist, Backwards, line);
 			_stations_pool[id]->addBranch(312, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -345,6 +393,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(311, dist, Backwards, line);
 			_stations_pool[id]->addBranch(313, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id++;
 			t += dist;
@@ -352,6 +401,7 @@ namespace route_task {
 			_stations_pool[id]->addBranch(312, dist, Backwards, line);
 			_stations_pool[id]->addBranch(115, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
 
 			id+=2;
 			t += dist;
@@ -359,6 +409,17 @@ namespace route_task {
 			_stations_pool[id]->addBranch(115, dist, Backwards, line);
 			_stations_pool[id]->addBranch(218, dist, Towards, line);
 			_stations_pool[id]->schedule_item.insert(pair<Line, unsigned int>(line, t));
+			cycle += dist;
+			cycle += dist;
+			cycle += dist;
+
+			_schedule.setTrainCycle(Green, cycle); cycle = 0;
+
+			// Unkomment for testing!
+			/* Schedule::setCycle(Red, 40000);
+			Schedule::setCycle(Blue, 160000);
+			Schedule::setCycle(Green, 40000);
+			*/
 
 		}
 
@@ -432,7 +493,7 @@ namespace route_task {
 				bool is_transfer = (new_line != current_line);
 				if (is_transfer) {
 					Direction d = branch->second._dir;
-					scheduleInfluence(distance_assumed, cur_point, _time_now, new_line, d);
+					scheduleInfluence(distance_assumed, cur_point, _time_start, new_line, d);
 				}
 				unsigned int id = branch->first, detour_order = distance_assumed;
 				if (findPointDistance(id, distance_assumed, cur_point->_current_path)) {
@@ -466,19 +527,20 @@ namespace route_task {
 			return false;
 		}
 
-		void scheduleInfluence(unsigned int& distance_assumed, Station* cur_point, unsigned int _time_now, Line line_new, Direction d) {
+		void scheduleInfluence(unsigned int& distance_assumed, Station* cur_point, unsigned int time_start, Line line_new, Direction d) {
 			unsigned int arr_t = 0;
 			if (cur_point->schedule_item.find(line_new) == cur_point->schedule_item.end())
-				cout << "\n Sorry it seems schedule is not set for station " << cur_point->_name << ". Schedule will not be accaunted while calculation";
+				cout << "\n Sorry, it seems schedule is not set for station " << cur_point->_name << ". Schedule will not be accaunted while calculation";
 			else arr_t = cur_point->schedule_item[line_new];
-			distance_assumed += Schedule::timeToWait(d, line_new, arr_t, _time_now + cur_point->_current_distance); //
+			distance_assumed += _schedule.timeToWait(d, line_new, arr_t, time_start + cur_point->_current_distance); // means "time of start + time on te way"
 		}
 
 	private:
 		map<const unsigned int, Station*> _stations_pool;
-		unsigned int _time_now = 0; // minutes from 0:00
+		unsigned int _time_start = 0; // minutes from 0:00
 		unsigned int _departure_point_id = 0;
 		unsigned int _destination_point_id = 0;
+		Schedule _schedule;
 	};
 
 }
