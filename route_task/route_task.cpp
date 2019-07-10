@@ -69,42 +69,57 @@ namespace route_task {
 		}
 
 		// short-term properties
-		unsigned int _current_distance = INF;							//destination from departure point
-		vector<unsigned int> _current_path;							//destination from departure point
-
-		map<unsigned int, Distance> _branches;								// linked station and distance to it
-		map<Line, unsigned int> schedule_item;							// line and time
-	//private:
+		unsigned int _current_distance = INF; //destination from departure point
+		vector<unsigned int> _current_path; //destination from departure point
+		map<unsigned int, Distance> _branches; // linked station and distance to it
+		map<Line, unsigned int> schedule_item; // line and time
 		// permanent properties
 		const string _name = "Noname";
 	};
 
-	struct Schedule
-	{
+	struct Schedule{
 
 		unsigned int timeToWait(Direction dir, Line line, unsigned int arrival_t, unsigned int time_now) {
-			if (dir == Towards) return (time_now + 			arrival_t				) % trainCycle(line);
-			else				return (time_now + (trainCycle(line) - arrival_t)	) % trainCycle(line);
+
+			// time moments of passing towards: n*T + t = time_now + waiting_time
+				// waiting_time = n*T + t - time_now = n*T + t - time_now%T
+					// = t - time_now%T , if t - time_now%T >= 0 
+					// = t - time_now%T + T, if t - time_now%T < 0 
+			// time moments of passing backwards: n*T + (T - t) = time_now + waiting_time
+					// = (T-t) - time_now%T , if t - time_now%T >= 0 
+					// = (T-t) - time_now%T + T, if t - time_now%T < 0
+			// where T is time of train cycle/2, t is arrival time to station by schedule
+			int wait_time = 0;
+			if (dir == Towards) {
+				int wait_time = arrival_t - time_now % trainCycle(line);
+			}
+			else {
+				int wait_time = (trainCycle(line) - arrival_t) - time_now % trainCycle(line);
+			}
+			if (wait_time < 0) wait_time += trainCycle(line);
+			return wait_time;
 		}
 
 		unsigned int trainCycle(Line line) { // sec
 			switch (line) {
-			case Red: return _red_cycle;										// assumed to be difined by user
-			case Blue: return _blue_cycle;
-			case Green: return _green_cycle;
-			default: return 100000;
+				case Red: return _red_cycle;										// assumed to be difined by user
+				case Blue: return _blue_cycle;
+				case Green: return _green_cycle;
+				default: return 100000;
 			}
 		}
 
 		void setTrainCycle(Line line, const unsigned int& val) {
-			if (line == Red) const_cast<unsigned int&>(_red_cycle) = val;
-			else if (line == Blue) const_cast<unsigned int&>(_blue_cycle) = val;
-			else if (line == Green) const_cast<unsigned int&>(_green_cycle) = val;
+			switch (line) {
+				case Red: const_cast<unsigned int&>(_red_cycle) = val;
+				case Blue: const_cast<unsigned int&>(_blue_cycle) = val;
+				case Green: const_cast<unsigned int&>(_green_cycle) = val;
+			}
 		}
 
-		const unsigned int _red_cycle = 40000;
-		unsigned const int _blue_cycle = 40000;
-		unsigned const int _green_cycle = 40000;
+		const unsigned int _red_cycle = 40000; // actually it's time duration of cycle/2.
+		const unsigned int _blue_cycle = 40000;
+		const unsigned int _green_cycle = 40000;
 	};
 
 	class Researcher {
@@ -530,7 +545,7 @@ namespace route_task {
 		void scheduleInfluence(unsigned int& distance_assumed, Station* cur_point, unsigned int time_start, Line line_new, Direction d) {
 			unsigned int arr_t = 0;
 			if (cur_point->schedule_item.find(line_new) == cur_point->schedule_item.end())
-				cout << "\n Sorry, it seems schedule is not set for station " << cur_point->_name << ". Schedule will not be accaunted while calculation";
+				;// cout << "\n Sorry, it seems schedule was not set for station " << cur_point->_name << ". Schedule will not be accaunted while calculation";
 			else arr_t = cur_point->schedule_item[line_new];
 			distance_assumed += _schedule.timeToWait(d, line_new, arr_t, time_start + cur_point->_current_distance); // means "time of start + time on te way"
 		}
